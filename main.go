@@ -1,58 +1,72 @@
 package main
 
 import (
-	"context"
+	"time"
 	"fmt"
 
 	"amazon.com/review/services/datasource"
 	"amazon.com/review/services/review"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	//"github.com/aws/aws-lambda-go/lambda"
+	"encoding/json"
+	"io/ioutil"
 )
 
-
-
-func translate () 
+type Response struct {
+	ID string;
+	ASIN string; 
+	Username string; 
+	Avatar string; 
+	Rate string; 
+	Title string;
+	TranslatedTitle string;
+	Text string;
+	TranslatedText string;
+	Date string;
+	TranslatedTitleDate string;
+	Data string;
+	TranslatedData string;
+	Helpful string;
+	TranslatedHelpful string;
+	Weight int;
+}
 
 func main() {
-	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithSharedConfigProfile("default"));
-	
+	var responces []Response
+
 	rows, err := datasource.New()
     if err != nil {
 		panic(err)
     }
 
+	c := make(chan review.ReviewTranslate)
+
 	for index, row := range rows {
 		if index == 0 {
 			continue
 		} 
-
-		result, err := 	review.Fetch(row[0])
-		if err != nil {	
-			panic(err)
-		}
-
-		client := translate.NewFromConfig(cfg)
-
-		response, err := client.TranslateText(context.Background(), &translate.TranslateTextInput{
-			SourceLanguageCode: aws.String("en"),
-			TargetLanguageCode: aws.String("fr"),
-			Text:               &result.Content,
-		})
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(*response.TranslatedText);
-		panic("dd")
+		
+		go review.Translate(row[0], index, &c)
 	}
 	
-	if(err != nil) {
-		fmt.Println(err);
+	for index, _ := range rows {
+		if index == 0 {
+			continue
+		} 
+		
+		select {
+		case review:= <-c:
+			responces = append(responces, Response{
+				ID: review.ID,
+				ASIN: review.ASIN,
+				Username: review.Username,
+				Text: review.Text,
+				TranslatedText: review.TranslatedText,
+			})
+		case <-time.After(2*time.Minute):
+			fmt.Println("Ne répond pas")
+		}
 	}
 
-	
-
-	// client.TranslateText(context.Background(), )
-	
+	file, _ := json.MarshalIndent(responces, "", " ")
+	_ = ioutil.WriteFile("output.json", file, 0644)
+	return 
 }
