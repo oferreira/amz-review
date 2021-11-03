@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 	"fmt"
+	"sort"
 
 	"amazon.com/review/services/datasource"
 	"amazon.com/review/services/review"
@@ -21,9 +22,11 @@ type Response struct {
 	Text string;
 	TranslatedText string;
 	Date string;
-	TranslatedTitleDate string;
-	Data string;
-	TranslatedData string;
+	TranslatedDate string;
+	Size string;
+	TranslatedSize string;
+	Purchase string;
+	TranslatedPurchase string;
 	Helpful string;
 	TranslatedHelpful string;
 	Weight int;
@@ -58,13 +61,31 @@ func main() {
 				ID: review.ID,
 				ASIN: review.ASIN,
 				Username: review.Username,
+				Avatar: review.Avatar,
+				Rate: review.Rate,
+				Title: review.Title,
+				TranslatedTitle: review.TranslatedTitle,
 				Text: review.Text,
 				TranslatedText: review.TranslatedText,
+				Date: review.Date,
+				TranslatedDate: review.TranslatedDate,
+				Size: review.Size,
+				TranslatedSize: review.TranslatedSize,
+				Purchase: review.Purchase,
+				TranslatedPurchase: review.TranslatedPurchase,
+				Helpful: review.Helpful,
+				TranslatedHelpful: review.TranslatedHelpful,
+				Weight: review.Weight,
 			})
 		case <-time.After(2*time.Minute):
 			fmt.Println("Ne répond pas")
 		}
 	}
+
+
+	sort.SliceStable(responces, func(i, j int) bool {
+		return responces[i].Weight < responces[j].Weight
+	})
 
 	file, _ := json.MarshalIndent(responces, "", " ")
 	_ = ioutil.WriteFile("output.json", file, 0644)
